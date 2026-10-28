@@ -140,16 +140,15 @@ class SettingsScreen extends StatelessWidget {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.expense),
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(dialogCtx);
               await store.resetAllData();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Semua data berhasil direset.'),
-                    backgroundColor: AppColors.primary,
-                  ),
-                );
-              }
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Semua data berhasil direset.'),
+                  backgroundColor: AppColors.primary,
+                ),
+              );
             },
             child: const Text('Reset Data'),
           ),

@@ -471,8 +471,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         date: _selectedDate,
       );
       if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('Transaksi berhasil dicatat.'),
             backgroundColor: AppColors.primary,

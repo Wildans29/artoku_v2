@@ -148,32 +148,89 @@ class BudgetScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _showBudgetForm(BuildContext context, DateTime month) async {
-    final formKey = GlobalKey<FormState>();
-    final amountController = TextEditingController();
-    String? categoryId;
-    final categories = store.categories
-        .where((item) => item.type == TransactionType.expense)
-        .toList();
-
-    await showModalBottomSheet<void>(
+  Future<void> _showBudgetForm(BuildContext context, DateTime month) {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            20,
-            16,
-            20,
-            MediaQuery.viewInsetsOf(sheetContext).bottom + 24,
-          ),
+      builder: (ctx) => _BudgetFormSheet(
+        store: store,
+        month: month,
+      ),
+    );
+  }
+}
+
+class _BudgetFormSheet extends StatefulWidget {
+  const _BudgetFormSheet({
+    required this.store,
+    required this.month,
+  });
+
+  final FinanceStore store;
+  final DateTime month;
+
+  @override
+  State<_BudgetFormSheet> createState() => _BudgetFormSheetState();
+}
+
+class _BudgetFormSheetState extends State<_BudgetFormSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _amountController;
+  String? _categoryId;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    await widget.store.setBudget(
+      month: widget.month,
+      limitAmount: parseNumber(_amountController.text),
+      categoryId: _categoryId,
+    );
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.pop(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Anggaran berhasil disimpan.'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = widget.store.categories
+        .where((item) => item.type == TransactionType.expense)
+        .toList();
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        MediaQuery.viewInsetsOf(context).bottom + 24,
+      ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
           child: Form(
-            key: formKey,
+            key: _formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,13 +252,13 @@ class BudgetScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Untuk periode ${formatMonthYear(month)}',
+                  'Untuk periode ${formatMonthYear(widget.month)}',
                   style: const TextStyle(
                       color: AppColors.textSecondary, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String?>(
-                  value: categoryId,
+                  value: _categoryId,
                   decoration: const InputDecoration(
                     labelText: 'Cakupan Kategori',
                     prefixIcon: Icon(Icons.category_outlined),
@@ -216,12 +273,11 @@ class BudgetScreen extends StatelessWidget {
                           child: Text(item.name),
                         )),
                   ],
-                  onChanged: (value) =>
-                      setSheetState(() => categoryId = value),
+                  onChanged: (value) => setState(() => _categoryId = value),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
-                  controller: amountController,
+                  controller: _amountController,
                   autofocus: true,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
@@ -234,7 +290,7 @@ class BudgetScreen extends StatelessWidget {
                     if (val.isNotEmpty) {
                       final formatted = formatNumber(num);
                       if (formatted != val) {
-                        amountController.value = TextEditingValue(
+                        _amountController.value = TextEditingValue(
                           text: formatted,
                           selection:
                               TextSelection.collapsed(offset: formatted.length),
@@ -262,8 +318,8 @@ class BudgetScreen extends StatelessWidget {
                       backgroundColor: const Color(0xFFF1F5F9),
                       side: BorderSide.none,
                       onPressed: () {
-                        setSheetState(() {
-                          amountController.text = formatNumber(val);
+                        setState(() {
+                          _amountController.text = formatNumber(val);
                         });
                       },
                     );
@@ -271,23 +327,7 @@ class BudgetScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 22),
                 FilledButton.icon(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-                    await store.setBudget(
-                      month: month,
-                      limitAmount: parseNumber(amountController.text),
-                      categoryId: categoryId,
-                    );
-                    if (sheetContext.mounted) {
-                      Navigator.pop(sheetContext);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Anggaran berhasil disimpan.'),
-                          backgroundColor: AppColors.primary,
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: _submit,
                   icon: const Icon(Icons.check_rounded),
                   label: const Text('Simpan Anggaran'),
                 ),
@@ -297,7 +337,6 @@ class BudgetScreen extends StatelessWidget {
         ),
       ),
     );
-    amountController.dispose();
   }
 }
 
